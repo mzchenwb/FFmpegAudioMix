@@ -1,15 +1,22 @@
 package com.chenwb.ffmpegaudiomix;
 
+import android.Manifest;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
 
 import com.chenwb.audiolibrary.FFAudioMixing;
 import com.chenwb.audiolibrary.FFBufferEncoder;
@@ -20,8 +27,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity implements Runnable, View.OnClickListener {
-
     private static final String TAG = MainActivity.class.getName();
+
+    private static final int PERMISSIONS_REQUEST_RECORD = 43;
     private FFRecorder mRecord;
     private TextView mText;
     private MediaPlayer mPlayer;
@@ -39,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements Runnable, View.On
         findViewById(R.id.record).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startRecord();
+               checkPermissionIfNeed();
             }
         });
 
@@ -110,6 +118,58 @@ public class MainActivity extends AppCompatActivity implements Runnable, View.On
         File outputPath = new File(getExternalCacheDir(), "merged.m4a");
 
         mAudioMixing.concatAudios(audios, outputPath.getAbsolutePath(), 2, true);
+    }
+
+    private void checkPermissionIfNeed() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.RECORD_AUDIO)) {
+                showSettingDialog();
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.RECORD_AUDIO}, PERMISSIONS_REQUEST_RECORD);
+            }
+        } else {
+            startRecord();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_RECORD:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // permission was granted
+                    startRecord();
+                } else {
+                    showSettingDialog();
+                }
+                break;
+            default:
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    private void showSettingDialog() {
+        new AlertDialog.Builder(MainActivity.this)
+                .setMessage("在权限管理中开启录音权限，以正常使用录音功能")
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        Uri uri = Uri.fromParts("package", getPackageName(), null);
+                        intent.setData(uri);
+                        startActivity(intent);
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                })
+                .create()
+                .show();
     }
 
     private void startRecord() {
