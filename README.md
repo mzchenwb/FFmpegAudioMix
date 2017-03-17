@@ -1,2 +1,3 @@
 # FFmpegAudioMix
-该工程通过FFmpeg实现录音功能，生成 *.so 可以参考
+该工程通过FFmpeg实现录音功能，生成 *.so
+audiolibrary库，通过Android AudioRecord 生成原始的录音数据，然后通过FFmpeg进行编码，可以进行合并音频，loudnormAudio音量正常化，concatAudios连接多个音频
